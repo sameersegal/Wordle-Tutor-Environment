@@ -1,10 +1,15 @@
 from copy import deepcopy
-import random
+from textwrap import dedent
 from typing import Any
 from openai import OpenAI
 import verifiers as vf
 from verifiers.envs.textarena_env import TextArenaEnv
-from prompts import THINK_GUESS_ADVICE_SYSTEM_PROMPT, THINK_GUESS_SYSTEM_PROMPT
+from prompts import THINK_GUESS_ADVICE_SYSTEM_PROMPT
+from rewards import (
+    check_answer_reward_func,
+    count_turns_reward_func,
+    partial_credit_reward_func,
+)
 from feedback import wordle_tutor_feedback_fn
 from verifiers.types import (
     Messages,
@@ -18,7 +23,7 @@ class WordleTutorEnv(TextArenaEnv):
         self,
         num_train_examples: int = 2000,
         num_eval_examples: int = 20,
-        guesser_model: str = "gpt-4.1-mini",
+        guesser: dict = {"model": "gpt-4.1-mini", "max_output_tokens": 16},
         **kwargs,
     ):
         system_prompt = THINK_GUESS_ADVICE_SYSTEM_PROMPT
@@ -26,13 +31,14 @@ class WordleTutorEnv(TextArenaEnv):
             fields=["think", "guess", "advice"], answer_field="advice")
 
         rubric = vf.Rubric(parser=parser)
-        # rubric.add_reward_func(check_answer_reward_func)
-        # rubric.add_reward_func(partial_credit_reward_func)
-        # rubric.add_reward_func(count_turns_reward_func)
+        rubric.add_reward_func(check_answer_reward_func)
+        rubric.add_reward_func(partial_credit_reward_func)
+        rubric.add_reward_func(count_turns_reward_func)
         rubric.add_reward_func(parser.get_format_reward_func(), weight=0.2)
 
         self.guesser_client = OpenAI()
-        self.guesser_model = guesser_model
+        self.guesser_model = guesser.get("model", "gpt-4.1-mini")
+        self.guesser_max_output_tokens = guesser.get("max_output_tokens", 16)
 
         super().__init__(
             game="Wordle-v0",
@@ -74,7 +80,7 @@ class WordleTutorEnv(TextArenaEnv):
 
     async def guess(self, advice: str, game_state: str) -> str:
 
-        system_prompt = f"""You are playing Wordle with the help of an expert tutor. \
+        system_prompt = dedent(f"""You are playing Wordle with the help of an expert tutor. \
         A secret 5-letter word has been chosen. You have 6 attempts to guess it.
         Feedback for each letter will be given as follows:
           - G (green): correct letter in the correct position
@@ -86,7 +92,7 @@ class WordleTutorEnv(TextArenaEnv):
         
         Make your next guess based on the advice from your tutor.
         Respond with only the 5-letter word you are guessing.
-        """
+        """)
 
         if advice == "" or advice is None:
             advice = "Start with any common 5-letter word like 'ARISE' or 'PLANT'."
@@ -95,15 +101,15 @@ class WordleTutorEnv(TextArenaEnv):
             model=self.guesser_model,
             instructions=system_prompt.strip(),
             input=advice.strip(),
-            max_output_tokens=16
+            max_output_tokens=self.guesser_max_output_tokens,
         )
+
+        if response.status != "completed" or response.error is not None:
+            raise ValueError(
+                f"Guesser model failed with status {response.status} and error {response.error}"
+            )
+
         response_text: str = response.output_text.strip()
-        print("*"*20)
-        print(system_prompt)
-        print(advice)
-        print("--")
-        print(response_text)
-        print("*"*20)
 
         return response_text.upper().replace(" ", "")
 
@@ -111,11 +117,11 @@ class WordleTutorEnv(TextArenaEnv):
 def load_environment(
     num_train_examples: int = 2000,
     num_eval_examples: int = 20,
-    guesser_model: str = "gpt-4.1-mini",
+    guesser: dict = {"model": "gpt-4.1-mini", "max_output_tokens": 16}
 ):
 
     return WordleTutorEnv(
         num_train_examples=num_train_examples,
         num_eval_examples=num_eval_examples,
-        guesser_model=guesser_model,
+        guesser=guesser,
     )

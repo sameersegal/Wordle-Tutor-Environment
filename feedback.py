@@ -7,10 +7,12 @@ def wordle_feedback_fn(observation: str) -> str:
 
 
 def wordle_tutor_feedback_fn(guess: str, observation: str) -> str:
-    output = f"<guess>[{guess}]</guess>\n"
+    # # output = f"<guess>[{guess}]</guess>\n"
+    # output = ""
 
-    if "Feedback:" in observation:
-        output += observation.split("Feedback:")[-1]
-    else:
-        output += observation
-    return output
+    # if "Feedback:" in observation:
+    #     output += observation.split("Feedback:")[-1]
+    # else:
+    #     output += observation
+    # return output
+    return wordle_feedback_fn(observation)
