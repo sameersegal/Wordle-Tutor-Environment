@@ -1,11 +1,9 @@
-# wordle-tutor
-
-> Replace the placeholders below, then remove this callout. Keep the Evaluation Reports section at the bottom intact so reports can auto-render.
+# Wordle Tutor
 
 ### Overview
 - **Environment ID**: `wordle-tutor`
-- **Short description**: <one-sentence description>
-- **Tags**: <comma-separated tags>
+- **Short description**: A tutor to teach you Wordle
+- **Tags**: multi-turn, game
 
 ### Datasets
 - **Primary dataset(s)**: <name(s) and brief description>
@@ -13,15 +11,17 @@
 - **Split sizes**: <train/eval counts>
 
 ### Task
-- **Type**: <single-turn | multi-turn | tool use>
-- **Parser**: <e.g., ThinkParser, XMLParser, custom>
-- **Rubric overview**: <briefly list reward functions and key metrics>
+- **Type**: multi-turn
+- **Parser**: XMLParser
+- **Rubric overview**: solving the puzzle, with partial credit and format rewards
 
 ### Quickstart
 Run an evaluation with default settings:
 
 ```bash
-uv run vf-eval wordle-tutor
+uv run vf-eval wordle-tutor   -m gpt-4.1-mini   -n 1 -r 3 -t 1024 -T 0.7   -a '{"num_train_examples": 1, "num_eval_examples": 1, "guesser": {"model": "gpt-4.1-mini", "max_output_tokens": 16} }'
+
+uv run vf-eval wordle-tutor   -m gpt-4.1-mini   -n 1 -r 3 -t 1024 -T 0.7   -a '{"num_train_examples": 1, "num_eval_examples": 1, "guesser": {"model": "gpt-5", "max_output_tokens": 100, "reasoning": {"effort": "minimal"} } }'
 ```
 
 Configure model and sampling:
@@ -38,8 +38,11 @@ Document any supported environment arguments and their meaning. Example:
 
 | Arg | Type | Default | Description |
 | --- | ---- | ------- | ----------- |
-| `foo` | str | `"bar"` | What this controls |
-| `max_examples` | int | `-1` | Limit on dataset size (use -1 for all) |
+| `num_train_examples` | int | 1000 | Number of Training Examples |
+| `num_eval_examples` | int | 1000 | Number of Eval Examples |
+| `guesser.model` | str |  | Model to simulate user |
+| `guesser.max_output_tokens` | int |  | Control the output tokens |
+| `guesser.reasoning` | dict |  | Reasoning effort |
 
 ### Metrics
 Summarize key metrics your rubric emits and how they’re interpreted.
