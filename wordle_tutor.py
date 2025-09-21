@@ -7,6 +7,7 @@ from verifiers.envs.textarena_env import TextArenaEnv
 from prompts import THINK_GUESS_ADVICE_SYSTEM_PROMPT
 from rewards import (
     check_answer_reward_func,
+    check_user_answer_reward_func,
     count_turns_reward_func,
     partial_credit_reward_func,
 )
@@ -23,7 +24,7 @@ class WordleTutorEnv(TextArenaEnv):
         self,
         num_train_examples: int = 2000,
         num_eval_examples: int = 20,
-        guesser: dict = {"model": "gpt-4.1-mini", "max_output_tokens": 16},
+        guesser: dict = {},  # "model": "gpt-4.1-mini", "max_output_tokens": 16
         **kwargs,
     ):
         system_prompt = THINK_GUESS_ADVICE_SYSTEM_PROMPT
@@ -32,6 +33,7 @@ class WordleTutorEnv(TextArenaEnv):
 
         rubric = vf.Rubric(parser=parser)
         rubric.add_reward_func(check_answer_reward_func)
+        rubric.add_reward_func(check_user_answer_reward_func)
         rubric.add_reward_func(partial_credit_reward_func)
         rubric.add_reward_func(count_turns_reward_func)
         rubric.add_reward_func(parser.get_format_reward_func(), weight=0.2)
@@ -39,6 +41,7 @@ class WordleTutorEnv(TextArenaEnv):
         self.guesser_client = OpenAI()
         self.guesser_model = guesser.get("model", "gpt-4.1-mini")
         self.guesser_max_output_tokens = guesser.get("max_output_tokens", 16)
+        self.guesser_reasoning = guesser.get("reasoning", None)
 
         super().__init__(
             game="Wordle-v0",
@@ -102,6 +105,7 @@ class WordleTutorEnv(TextArenaEnv):
             instructions=system_prompt.strip(),
             input=advice.strip(),
             max_output_tokens=self.guesser_max_output_tokens,
+            reasoning=self.guesser_reasoning
         )
 
         if response.status != "completed" or response.error is not None:
@@ -117,7 +121,7 @@ class WordleTutorEnv(TextArenaEnv):
 def load_environment(
     num_train_examples: int = 2000,
     num_eval_examples: int = 20,
-    guesser: dict = {"model": "gpt-4.1-mini", "max_output_tokens": 16}
+    guesser: dict = {}  # "model": "gpt-4.1-mini", "max_output_tokens": 16
 ):
 
     return WordleTutorEnv(

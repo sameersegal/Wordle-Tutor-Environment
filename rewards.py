@@ -1,20 +1,30 @@
-# reward functions
+# correctness
 def check_answer_reward_func(parser, completion, answer, **kwargs) -> float:
-    guess = parser.parse_answer(completion)
-    return 1.0 if guess == "[" + answer + "]" else 0.0
+    message = parser.get_assistant_messages(completion)[-1]
+    result = parser.parse(message["content"])
+    return 1.0 if result.guess == "[" + answer + "]" else 0.0
 
 
-def count_turns_reward_func(parser, completion, answer, **kwargs) -> float:
+def check_user_answer_reward_func(parser, completion, answer, state, **kwargs) -> float:
+    return 1.0 if state["is_finished"] else 0.0
+
+# efficiency
+
+
+def count_turns_reward_func(parser, completion, answer, state, **kwargs) -> float:
     num_turns = len([x for x in completion if x["role"] == "assistant"])
-    is_correct = check_answer_reward_func(parser, completion, answer, **kwargs)
+    is_correct = check_user_answer_reward_func(
+        parser, completion, answer, state, **kwargs)
     return is_correct / (num_turns + 1)
 
+# partial credit
 
-def partial_credit_reward_func(parser, completion, answer, **kwargs) -> float:
+
+def partial_credit_reward_func(parser, completion, answer, state, **kwargs) -> float:
     """Reward function that gives partial credit for the correct guess."""
 
-    is_completed = check_answer_reward_func(
-        parser, completion, answer, **kwargs)
+    is_completed = check_user_answer_reward_func(
+        parser, completion, answer, state, **kwargs)
     if is_completed:
         return 1.0
 
