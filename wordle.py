@@ -6,7 +6,7 @@ from rewards import (check_answer_reward_func,
 from feedback import wordle_feedback_fn
 
 
-class WordleTutorEnv(TextArenaEnv):
+class WordleEnv(TextArenaEnv):
 
     def __init__(
         self,
@@ -47,7 +47,7 @@ def load_environment(
     use_think: bool = True,
 ):
 
-    return WordleTutorEnv(
+    return WordleEnv(
         num_train_examples=num_train_examples,
         num_eval_examples=num_eval_examples,
         use_think=use_think,
